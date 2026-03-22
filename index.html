@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planly — Dashboard Inteligente</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: rgba(255,255,255,0.07);
+    --accent: #7c6af7;
+    --accent2: #f97316;
+    --text: #f0f0f5;
+    --muted: rgba(240,240,245,0.45);
+    --success: #22d3a5;
+    --font-head: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+  }
+
+  /* UPLOAD SCREEN */
+  #upload-screen {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #upload-screen::before {
+    content: '';
+    position: absolute;
+    top: -200px; left: 50%;
+    transform: translateX(-50%);
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(124,106,247,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .logo {
+    font-family: var(--font-head);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 3rem;
+  }
+
+  .hero-title {
+    font-family: var(--font-head);
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+    font-weight: 800;
+    text-align: center;
+    line-height: 1.1;
+    margin-bottom: 1rem;
+    max-width: 700px;
+  }
+
+  .hero-title span {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .hero-sub {
+    color: var(--muted);
+    font-size: 1.05rem;
+    text-align: center;
+    margin-bottom: 3rem;
+    max-width: 480px;
+    line-height: 1.6;
+  }
+
+  .upload-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 560px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .field-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.4rem;
+  }
+
+  .segment-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+  }
+
+  .seg-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.7rem 1rem;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.18s;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .seg-btn:hover { border-color: var(--accent); background: rgba(124,106,247,0.08); }
+  .seg-btn.active { border-color: var(--accent); background: rgba(124,106,247,0.15); color: #fff; }
+  .seg-btn .icon { font-size: 1.1rem; }
+
+  .context-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    width: 100%;
+    resize: none;
+    outline: none;
+    transition: border-color 0.18s;
+  }
+
+  .context-input:focus { border-color: rgba(124,106,247,0.5); }
+  .context-input::placeholder { color: var(--muted); }
+
+  .drop-zone {
+    border: 1.5px dashed rgba(124,106,247,0.35);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(124,106,247,0.05);
+  }
+
+  .drop-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+
+  .drop-icon { font-size: 1.8rem; margin-bottom: 0.5rem; }
+  .drop-text { font-size: 0.85rem; color: var(--muted); }
+  .drop-text strong { color: var(--accent); }
+  .file-name { font-size: 0.8rem; color: var(--success); margin-top: 0.4rem; font-weight: 500; }
+
+  .generate-btn {
+    background: linear-gradient(135deg, var(--accent) 0%, #9b8bff 100%);
+    border: none;
+    border-radius: 12px;
+    padding: 1rem;
+    color: #fff;
+    font-family: var(--font-head);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+    width: 100%;
+  }
+
+  .generate-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .generate-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* LOADING */
+  #loading-screen {
+    display: none;
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .loader-ring {
+    width: 56px; height: 56px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loader-text {
+    font-family: var(--font-head);
+    font-size: 1rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* DASHBOARD SCREEN */
+  #dash-screen {
+    display: none;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .dash-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .dash-title {
+    font-family: var(--font-head);
+    font-size: 1.6rem;
+    font-weight: 800;
+  }
+
+  .dash-segment-badge {
+    background: rgba(124,106,247,0.15);
+    border: 1px solid rgba(124,106,247,0.3);
+    color: var(--accent);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.75rem;
+    border-radius: 99px;
+  }
+
+  .back-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    color: var(--muted);
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+
+  .back-btn:hover { color: var(--text); }
+
+  /* KPI GRID */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .kpi-label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .kpi-value {
+    font-family: var(--font-head);
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .kpi-delta {
+    font-size: 0.75rem;
+    margin-top: 0.3rem;
+    color: var(--success);
+  }
+
+  /* CHARTS */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+  }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.5rem;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .chart-title {
+    font-family: var(--font-head);
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 1.25rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* AI INSIGHT */
+  .insight-card {
+    background: linear-gradient(135deg, rgba(124,106,247,0.08) 0%, rgba(249,115,22,0.05) 100%);
+    border: 1px solid rgba(124,106,247,0.2);
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .insight-header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+  }
+
+  .insight-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .insight-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+  }
+
+  .insight-text {
+    font-size: 0.92rem;
+    line-height: 1.7;
+    color: rgba(240,240,245,0.85);
+  }
+
+  /* TABLE */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.5rem;
+    overflow-x: auto;
+    animation: fadeUp 0.7s ease both;
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+
+  .data-table th {
+    color: var(--muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.7rem;
+    padding: 0 1rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .data-table td {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    color: rgba(240,240,245,0.8);
+  }
+
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* EMAIL POPUP */
+  #email-popup {
+    display: none;
+    position: fixed;
+    bottom: 0; right: 24px;
+    width: 380px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 -4px 40px rgba(0,0,0,0.5);
+    z-index: 999;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideUp 0.22s ease;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .popup-header {
+    background: var(--surface2);
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: default;
+  }
+
+  .popup-header-title {
+    font-family: var(--font-head);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .popup-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 0;
+    transition: color 0.15s;
+  }
+  .popup-close:hover { color: var(--text); }
+
+  .popup-field {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding: 0.6rem 1rem;
+    gap: 0.6rem;
+  }
+
+  .popup-field-label {
+    font-size: 0.78rem;
+    color: var(--muted);
+    min-width: 52px;
+    font-weight: 500;
+  }
+
+  .popup-field input {
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    width: 100%;
+  }
+
+  .popup-field input::placeholder { color: var(--muted); }
+
+  .popup-body {
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .popup-insight-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    font-weight: 500;
+  }
+
+  .popup-insight-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem 0.8rem;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    resize: none;
+    outline: none;
+    min-height: 70px;
+    transition: border-color 0.15s;
+  }
+
+  .popup-insight-input:focus { border-color: rgba(124,106,247,0.5); }
+  .popup-insight-input::placeholder { color: var(--muted); }
+
+  .popup-kpi-preview {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 0.9rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .popup-kpi-chip {
+    background: rgba(124,106,247,0.12);
+    border: 1px solid rgba(124,106,247,0.2);
+    border-radius: 6px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.75rem;
+    color: var(--text);
+  }
+
+  .popup-kpi-chip strong {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .popup-footer {
+    padding: 0.75rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--border);
+  }
+
+  .popup-send-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    padding: 0.55rem 1.25rem;
+    color: #fff;
+    font-family: var(--font-head);
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.12s;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .popup-send-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+
+  .popup-hint {
+    font-size: 0.7rem;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* BOTÃO FLUTUANTE DO EMAIL */
+  #email-fab {
+    display: none;
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: linear-gradient(135deg, var(--accent), #9b8bff);
+    border: none;
+    border-radius: 50px;
+    padding: 0.75rem 1.4rem;
+    color: #fff;
+    font-family: var(--font-head);
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 24px rgba(124,106,247,0.4);
+    transition: transform 0.15s, box-shadow 0.15s;
+    gap: 0.5rem;
+    align-items: center;
+    z-index: 998;
+  }
+
+  #email-fab:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(124,106,247,0.5); }
+
+  /* ERROR */
+  .error-box {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.25);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    font-size: 0.85rem;
+    color: #fca5a5;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- UPLOAD SCREEN -->
+<div id="upload-screen">
+  <div class="logo">⬡ Planly</div>
+
+  <h1 class="hero-title">Sua planilha vira um<br><span>dashboard inteligente</span></h1>
+  <p class="hero-sub">Sobe a planilha, diz quem você é. A IA entende tudo e monta seu painel em segundos.</p>
+
+  <div class="upload-card">
+
+    <div>
+      <div class="field-label">Qual é o seu segmento?</div>
+      <div class="segment-grid">
+        <button class="seg-btn active" data-seg="gestor" onclick="selectSeg(this)"><span class="icon">📊</span> Gestor de tráfego</button>
+        <button class="seg-btn" data-seg="ecommerce" onclick="selectSeg(this)"><span class="icon">🛒</span> E-commerce</button>
+        <button class="seg-btn" data-seg="infoprodutor" onclick="selectSeg(this)"><span class="icon">🎓</span> Infoprodutor</button>
+        <button class="seg-btn" data-seg="negocio" onclick="selectSeg(this)"><span class="icon">🏢</span> Pequeno negócio</button>
+        <button class="seg-btn" data-seg="outro" onclick="selectSeg(this)" style="grid-column:span 2;"><span class="icon">✨</span> Outro — descreva no campo abaixo o que você faz</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="field-label">O que você quer analisar?</div>
+      <textarea class="context-input" id="context-input" rows="2"
+        placeholder="Ex: quero ver meu CPL, ROAS e quais campanhas estão performando melhor..."></textarea>
+    </div>
+
+    <div>
+      <div class="field-label">Sua planilha (CSV ou Excel)</div>
+      <div class="drop-zone" id="drop-zone">
+        <input type="file" id="file-input" accept=".csv,.xlsx,.xls" onchange="handleFile(this)">
+        <div class="drop-icon">📂</div>
+        <div class="drop-text">Arraste ou <strong>clique para selecionar</strong></div>
+        <div class="drop-text">CSV, XLSX, XLS</div>
+        <div class="file-name" id="file-name"></div>
+      </div>
+    </div>
+
+    <div class="error-box" id="error-box"></div>
+
+    <button class="generate-btn" id="generate-btn" onclick="generate()">Gerar Dashboard →</button>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading-screen" style="display:none; min-height:100vh; flex-direction:column; align-items:center; justify-content:center; gap:1.5rem;">
+  <div class="loader-ring"></div>
+  <div class="loader-text" id="loader-text">Lendo sua planilha...</div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dash-screen" style="display:none; padding:2rem; max-width:1200px; margin:0 auto;">
+  <div class="dash-header">
+    <div style="display:flex; align-items:center; gap:1rem;">
+      <div class="dash-title" id="dash-title">Dashboard</div>
+      <div class="dash-segment-badge" id="dash-badge">Segmento</div>
+    </div>
+    <div style="display:flex; gap:0.6rem; align-items:center;">
+      <button onclick="copyDash(this)" style="background:#1a1a24; border:1px solid rgba(255,255,255,0.07); border-radius:8px; padding:0.5rem 1rem; color:rgba(240,240,245,0.7); font-family:'DM Sans',sans-serif; font-size:0.8rem; cursor:pointer; transition:all 0.15s;" onmouseover="this.style.color='#f0f0f5'" onmouseout="this.style.color='rgba(240,240,245,0.7)'">📋 Copiar resumo</button>
+      <button onclick="downloadDash()" style="background:linear-gradient(135deg,#7c6af7,#9b8bff); border:none; border-radius:8px; padding:0.5rem 1.1rem; color:#fff; font-family:'Syne',sans-serif; font-size:0.8rem; font-weight:700; cursor:pointer; transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">⬇ Baixar Dashboard</button>
+      <button class="back-btn" onclick="goBack()">← Nova análise</button>
+    </div>
+  </div>
+
+  <div class="insight-card">
+    <div class="insight-header">
+      <div class="insight-dot"></div>
+      <div class="insight-label">Análise IA</div>
+    </div>
+    <div class="insight-text" id="insight-text">Carregando análise...</div>
+  </div>
+
+  <div class="kpi-grid" id="kpi-grid"></div>
+  <div class="charts-grid" id="charts-grid"></div>
+  <div class="table-card" id="table-card" style="display:none;">
+    <div class="chart-title">Dados detalhados</div>
+    <div id="table-container"></div>
+  </div>
+</div>
+
+<script>
+let selectedSeg = 'gestor';
+let fileData = null;
+let chartInstances = [];
+let currentKpis = [];
+let currentTitle = '';
+let currentInsight = '';
+
+const segLabels = {
+  gestor: 'Gestor de Tráfego',
+  ecommerce: 'E-commerce',
+  infoprodutor: 'Infoprodutor',
+  negocio: 'Pequeno Negócio',
+  outro: 'Outro'
+};
+
+// TRIAL — 30 dias gratuitos
+const TRIAL_DAYS = 30;
+window.addEventListener('DOMContentLoaded', () => {
+  const first = localStorage.getItem('planly_first_access');
+  if (!first) {
+    localStorage.setItem('planly_first_access', Date.now().toString());
+  } else {
+    const diff = (Date.now() - parseInt(first)) / (1000 * 60 * 60 * 24);
+    if (diff > TRIAL_DAYS) {
+      document.body.innerHTML = `
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0a0a0f;font-family:'DM Sans',sans-serif;">
+          <div style="text-align:center;padding:2rem;max-width:420px;">
+            <div style="font-size:2.5rem;margin-bottom:1rem;">⏳</div>
+            <h2 style="font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;color:#f0f0f5;margin-bottom:0.75rem;">Seu período de teste encerrou</h2>
+            <p style="color:rgba(240,240,245,0.5);font-size:0.9rem;line-height:1.6;margin-bottom:2rem;">Você usou os 30 dias gratuitos do Planly. Para continuar gerando dashboards, assine um plano.</p>
+            <a href="https://wa.me/5571993668179?text=Oi%2C%20meu%20per%C3%ADodo%20de%20teste%20do%20Planly%20encerrou%20e%20quero%20continuar%20usando%21%20Como%20fa%C3%A7o%20pra%20assinar%3F" target="_blank" style="background:linear-gradient(135deg,#7c6af7,#9b8bff);color:#fff;text-decoration:none;border-radius:12px;padding:0.9rem 2rem;font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;display:inline-block;">Falar com o time →</a>
+          </div>
+        </div>`;
+      return;
+    }
+    const remaining = Math.ceil(TRIAL_DAYS - diff);
+    const badge = document.createElement('div');
+    badge.style.cssText = 'position:fixed;top:1rem;right:1rem;background:rgba(124,106,247,0.15);border:1px solid rgba(124,106,247,0.3);border-radius:99px;padding:0.35rem 0.9rem;font-size:0.75rem;color:#9b8bff;font-family:"DM Sans",sans-serif;z-index:999;';
+    badge.textContent = `⏱ ${remaining} dias de teste`;
+    document.body.appendChild(badge);
+  }
+});
+
+function selectSeg(btn) {
+  document.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedSeg = btn.dataset.seg;
+}
+
+function handleFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('file-name').textContent = '✓ ' + file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    Papa.parse(e.target.result, {
+      header: true, skipEmptyLines: true,
+      complete: result => { fileData = result; }
+    });
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function setLoading(msg) { document.getElementById('loader-text').textContent = msg; }
+
+function showError(msg) {
+  const el = document.getElementById('error-box');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// COPIAR RESUMO
+function copyDash(btn) {
+  const kpiLines = currentKpis.map(k => '• ' + k.label + ': ' + k.value + (k.delta ? ' (' + k.delta + ')' : '')).join('\n');
+  const text = '📊 ' + currentTitle + '\n\n' + currentInsight + '\n\n' + kpiLines + '\n\n— Gerado pelo Planly';
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✅ Copiado!';
+    setTimeout(() => btn.textContent = '📋 Copiar resumo', 2000);
+  });
+}
+
+// DOWNLOAD DO DASHBOARD — captura gráficos como imagem PNG
+function downloadDash() {
+  // Converte cada canvas de gráfico em base64
+  const chartImgs = chartInstances.map((c, i) => {
+    const canvas = document.getElementById('chart_' + i);
+    return canvas ? canvas.toDataURL('image/png') : null;
+  });
+
+  const chartTitles = Array.from(document.querySelectorAll('.chart-title')).map(el => el.textContent);
+
+  // Captura tabela
+  const tableHTML = document.getElementById('table-container') ? document.getElementById('table-container').innerHTML : '';
+  const tableVisible = document.getElementById('table-card').style.display !== 'none';
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${currentTitle} — Planly</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0a0a0f; --surface:#111118; --border:rgba(255,255,255,0.07); --accent:#7c6af7; --text:#f0f0f5; --muted:rgba(240,240,245,0.45); --success:#22d3a5; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; padding:2rem; max-width:1200px; margin:0 auto; }
+  .header { display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; }
+  .dash-title { font-family:'Syne',sans-serif; font-size:1.8rem; font-weight:800; }
+  .badge { background:rgba(124,106,247,0.15); border:1px solid rgba(124,106,247,0.3); color:#7c6af7; font-size:0.75rem; padding:0.3rem 0.75rem; border-radius:99px; white-space:nowrap; }
+  .insight-card { background:linear-gradient(135deg,rgba(124,106,247,0.08),rgba(249,115,22,0.05)); border:1px solid rgba(124,106,247,0.2); border-radius:14px; padding:1.5rem; margin-bottom:2rem; font-size:0.92rem; line-height:1.7; color:rgba(240,240,245,0.85); }
+  .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:1rem; margin-bottom:2rem; }
+  .kpi-card { background:#111118; border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:1.25rem 1.5rem; }
+  .kpi-label { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:rgba(240,240,245,0.45); margin-bottom:0.5rem; }
+  .kpi-value { font-family:'Syne',sans-serif; font-size:1.8rem; font-weight:700; }
+  .kpi-delta { font-size:0.75rem; margin-top:0.3rem; color:#22d3a5; }
+  .charts-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:1.25rem; margin-bottom:2rem; }
+  .chart-card { background:#111118; border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:1.5rem; }
+  .chart-card-title { font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:rgba(240,240,245,0.45); margin-bottom:1rem; font-weight:500; }
+  .chart-card img { width:100%; border-radius:8px; }
+  .table-card { background:#111118; border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:1.5rem; margin-bottom:2rem; overflow-x:auto; }
+  .data-table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+  .data-table th { color:rgba(240,240,245,0.45); font-weight:500; text-transform:uppercase; letter-spacing:0.06em; font-size:0.7rem; padding:0 1rem 0.75rem; text-align:left; border-bottom:1px solid rgba(255,255,255,0.07); }
+  .data-table td { padding:0.7rem 1rem; border-bottom:1px solid rgba(255,255,255,0.03); color:rgba(240,240,245,0.8); }
+  .footer { text-align:center; font-size:0.75rem; color:rgba(240,240,245,0.3); padding-top:1rem; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="dash-title">${currentTitle}</div>
+  <div class="badge">${segLabels[selectedSeg]}</div>
+</div>
+<div class="insight-card">${currentInsight}</div>
+<div class="kpi-grid">
+${currentKpis.map(k => `<div class="kpi-card"><div class="kpi-label">${k.label}</div><div class="kpi-value">${k.value}</div>${k.delta ? `<div class="kpi-delta">${k.delta}</div>` : ''}</div>`).join('')}
+</div>
+<div class="charts-grid">
+${chartImgs.map((src, i) => src ? `<div class="chart-card"><div class="chart-card-title">${chartTitles[i] || ''}</div><img src="${src}"></div>` : '').join('')}
+</div>
+${tableVisible && tableHTML ? `<div class="table-card"><div class="chart-card-title" style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.06em;color:rgba(240,240,245,0.45);margin-bottom:1rem;">Dados detalhados</div>${tableHTML}</div>` : ''}
+<div class="footer">Gerado pelo Planly • ${new Date().toLocaleDateString('pt-BR')}</div>
+</body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = currentTitle.replace(/\s+/g, '-').toLowerCase() + '-planly.html';
+  a.click();
+}
+
+async function generate() {
+  document.getElementById('error-box').style.display = 'none';
+
+  if (!fileData || !fileData.data || fileData.data.length === 0) {
+    showError('Por favor, selecione uma planilha válida primeiro.');
+    return;
+  }
+
+  document.getElementById('upload-screen').style.display = 'none';
+  document.getElementById('loading-screen').style.display = 'flex';
+
+  const context = document.getElementById('context-input').value;
+  const segLabel = segLabels[selectedSeg];
+  const rows = fileData.data.slice(0, 50);
+  const cols = fileData.meta.fields;
+  const sample = rows.slice(0, 8);
+
+  setLoading('Analisando sua planilha...');
+
+  const prompt = `Você é um especialista em análise de dados e dashboards. Analise a planilha abaixo e gere um dashboard completo.
+
+SEGMENTO: ${segLabel}
+CONTEXTO DO USUÁRIO: ${context || 'Análise geral dos dados'}
+COLUNAS DISPONÍVEIS: ${cols.join(', ')}
+TOTAL DE LINHAS: ${rows.length}
+AMOSTRA DOS DADOS (primeiras 8 linhas):
+${JSON.stringify(sample, null, 2)}
+
+Gere um dashboard retornando APENAS JSON válido (sem markdown, sem texto fora do JSON):
+
+{
+  "titulo": "título curto",
+  "insight": "análise executiva 2-3 frases com números reais dos dados",
+  "kpis": [{"label": "nome","value": "valor formatado","delta": "contexto"}],
+  "graficos": [{"titulo": "título","tipo": "bar|line|doughnut","labels": [],"valores": [],"cor": "purple|orange|green|blue"}],
+  "tabela": {"colunas": [],"linhas": [[]]}
+}
+
+Regras: 4-6 KPIs, 2 gráficos, tabela máx 10 linhas e 5 colunas, valores REAIS dos dados, específico pro segmento ${segLabel}.`;
+
+  try {
+    setLoading('IA interpretando os dados...');
+    const resp = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
+    });
+    setLoading('Montando seu dashboard...');
+    const data = await resp.json();
+    const raw = data.content.map(i => i.text || '').join('');
+    const dash = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    renderDash(dash, segLabel);
+  } catch(err) {
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('upload-screen').style.display = 'flex';
+    showError('Erro ao gerar dashboard. Verifique se o arquivo é CSV válido e tente novamente.');
+    console.error(err);
+  }
+}
+
+const corMap = {
+  purple: { bg: 'rgba(124,106,247,0.8)', border: '#7c6af7' },
+  orange: { bg: 'rgba(249,115,22,0.8)', border: '#f97316' },
+  green:  { bg: 'rgba(34,211,165,0.8)', border: '#22d3a5' },
+  blue:   { bg: 'rgba(59,130,246,0.8)', border: '#3b82f6' },
+};
+
+function renderDash(dash, segLabel) {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('dash-screen').style.display = 'block';
+
+  currentTitle = dash.titulo || 'Dashboard';
+  currentKpis = dash.kpis || [];
+  currentInsight = dash.insight || '';
+
+  document.getElementById('dash-title').textContent = currentTitle;
+  document.getElementById('dash-badge').textContent = segLabel;
+  document.getElementById('insight-text').textContent = currentInsight;
+
+  // KPIs
+  const kpiGrid = document.getElementById('kpi-grid');
+  kpiGrid.innerHTML = '';
+  currentKpis.forEach((kpi, i) => {
+    const card = document.createElement('div');
+    card.className = 'kpi-card';
+    card.style.animationDelay = (i * 0.07) + 's';
+    card.innerHTML = `<div class="kpi-label">${kpi.label}</div><div class="kpi-value">${kpi.value}</div>${kpi.delta ? `<div class="kpi-delta">${kpi.delta}</div>` : ''}`;
+    kpiGrid.appendChild(card);
+  });
+
+  // Charts
+  chartInstances.forEach(c => c.destroy());
+  chartInstances = [];
+  const chartsGrid = document.getElementById('charts-grid');
+  chartsGrid.innerHTML = '';
+  (dash.graficos || []).forEach((g, i) => {
+    const card = document.createElement('div');
+    card.className = 'chart-card';
+    card.style.animationDelay = (0.3 + i * 0.1) + 's';
+    const cid = 'chart_' + i;
+    card.innerHTML = `<div class="chart-title">${g.titulo}</div><div style="position:relative;height:240px;"><canvas id="${cid}"></canvas></div>`;
+    chartsGrid.appendChild(card);
+    const cor = corMap[g.cor] || corMap.purple;
+    const instance = new Chart(document.getElementById(cid).getContext('2d'), {
+      type: g.tipo || 'bar',
+      data: {
+        labels: g.labels || [],
+        datasets: [{
+          label: g.titulo, data: g.valores || [],
+          backgroundColor: g.tipo === 'doughnut' ? [corMap.purple.bg, corMap.orange.bg, corMap.green.bg, corMap.blue.bg] : cor.bg,
+          borderColor: g.tipo === 'doughnut' ? [corMap.purple.border, corMap.orange.border, corMap.green.border, corMap.blue.border] : cor.border,
+          borderWidth: 1.5, borderRadius: g.tipo === 'bar' ? 6 : 0, tension: 0.4,
+          fill: g.tipo === 'line' ? { target: 'origin', above: 'rgba(124,106,247,0.08)' } : false,
+          pointBackgroundColor: cor.border, pointRadius: g.tipo === 'line' ? 4 : 0,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: g.tipo === 'doughnut', labels: { color: 'rgba(240,240,245,0.6)', font: { size: 11 }, boxWidth: 10 } } },
+        scales: g.tipo !== 'doughnut' ? {
+          x: { ticks: { color: 'rgba(240,240,245,0.45)', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+          y: { ticks: { color: 'rgba(240,240,245,0.45)', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.06)' } }
+        } : {}
+      }
+    });
+    chartInstances.push(instance);
+  });
+
+  // Table
+  if (dash.tabela && dash.tabela.colunas) {
+    const tc = document.getElementById('table-card');
+    tc.style.display = 'block';
+    let html = '<table class="data-table"><thead><tr>';
+    dash.tabela.colunas.forEach(c => html += `<th>${c}</th>`);
+    html += '</tr></thead><tbody>';
+    (dash.tabela.linhas || []).forEach(r => { html += '<tr>'; r.forEach(v => html += `<td>${v}</td>`); html += '</tr>'; });
+    html += '</tbody></table>';
+    document.getElementById('table-container').innerHTML = html;
+  }
+}
+
+function goBack() {
+  document.getElementById('dash-screen').style.display = 'none';
+  document.getElementById('upload-screen').style.display = 'flex';
+  chartInstances.forEach(c => c.destroy());
+  chartInstances = [];
+  fileData = null; currentKpis = []; currentTitle = ''; currentInsight = '';
+  document.getElementById('file-name').textContent = '';
+  document.getElementById('file-input').value = '';
+}
+</script>
+</body>
+</html>
